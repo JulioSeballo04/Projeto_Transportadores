@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balofinho Transportadores</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-mark">B</div>
+      <span class="topbar-brand">Balofinho Transportadores</span>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">B</div>
+        <span class="user-name" id="user-name-display"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO -->
+  <div class="page">
+
+    <div class="page-header">
+      <h1>Transportadores</h1>
+      <p>Selecione uma linha para registrar manutenções e consultar o histórico</p>
+    </div>
+
+    <!-- Resumo rápido -->
+    <div class="summary-row">
+      <div class="stat">
+        <div class="stat-label">Total de Registros</div>
+        <div class="stat-val accent" id="stat-total">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Este Mês</div>
+        <div class="stat-val info" id="stat-mes">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Última Manutenção</div>
+        <div class="stat-val small" id="stat-ultima">—</div>
+      </div>
+    </div>
+
+    <!-- Grid de transportadores -->
+    <div class="trans-grid" id="trans-grid"></div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
