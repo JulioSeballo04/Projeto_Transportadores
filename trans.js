@@ -1,17 +1,20 @@
-// ── Sessão ──
-const userData = sessionStorage.getItem('balofinho_user');
-if (!userData) window.location.href = 'login.html';
-const user = JSON.parse(userData || '{}');
-const nome = user.nome || 'Operador';
-document.getElementById('user-name-display').textContent = nome.charAt(0).toUpperCase() + nome.slice(1);
-document.getElementById('user-avatar').textContent = nome[0].toUpperCase();
+import { auth, db, signOut, onAuthStateChanged, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from './firebase.js';
 
-function logout() {
-  sessionStorage.removeItem('balofinho_user');
+// ── Verifica autenticação ──
+onAuthStateChanged(auth, user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+  const nome = sessionStorage.getItem('balofinho_nome') || user.email.split('@')[0];
+  document.getElementById('user-name-display').textContent = nome.charAt(0).toUpperCase() + nome.slice(1);
+  document.getElementById('user-avatar').textContent = nome[0].toUpperCase();
+  init();
+});
+
+window.logout = async function() {
+  await signOut(auth);
   window.location.href = 'login.html';
-}
+};
 
-// ── Lista de transportadores ──
+// ── Lista de transportadores (para o drawer) ──
 const TRANSPORTADORES = [
   { id: 'guardanapo',      nome: 'Guardanapo',             arquivo: 'trans-guardanapo.html' },
   { id: 'professional',    nome: 'Professional',            arquivo: 'trans-professional.html' },
@@ -30,14 +33,47 @@ const TRANSPORTADORES = [
   { id: '950',             nome: '950',                    arquivo: 'trans-950.html' },
 ];
 
-// ── Monta o drawer ──
-function buildDrawer() {
+// Cache local dos registros deste transportador
+let registrosCache = [];
+let editDocId = null;
+
+// ── Init ──
+async function init() {
+  document.getElementById('manut-data').value = new Date().toISOString().split('T')[0];
+  await carregarRegistros();
+  buildDrawer();
+}
+
+// ── Drawer ──
+window.openDrawer = function() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('hamburger-btn').classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeDrawer = function() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('hamburger-btn').classList.remove('open');
+  document.body.style.overflow = '';
+};
+
+window.toggleDrawer = function() {
+  document.getElementById('drawer').classList.contains('open') ? window.closeDrawer() : window.openDrawer();
+};
+
+document.getElementById('drawer-overlay').addEventListener('click', window.closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') window.closeDrawer(); });
+
+async function buildDrawer() {
   const body = document.getElementById('drawer-body');
   if (!body) return;
 
-  const registros = carregarRegistros();
+  // Busca contagens de todos os transportadores
+  const snap = await getDocs(collection(db, 'manutencoes'));
+  const todos = snap.docs.map(d => d.data());
 
-  // Link para menu principal
   body.innerHTML = `
     <div class="drawer-section-title">Navegação</div>
     <a class="drawer-item" href="app.html">
@@ -49,7 +85,7 @@ function buildDrawer() {
   `;
 
   TRANSPORTADORES.forEach(t => {
-    const count = registros.filter(r => r.transId === t.id).length;
+    const count = todos.filter(r => r.transId === t.id).length;
     const isActive = t.id === TRANS_ID;
     const item = document.createElement('a');
     item.className = 'drawer-item' + (isActive ? ' active' : '');
@@ -63,64 +99,24 @@ function buildDrawer() {
   });
 }
 
-// ── Controle do drawer ──
-function openDrawer() {
-  document.getElementById('drawer').classList.add('open');
-  document.getElementById('drawer-overlay').classList.add('open');
-  document.getElementById('hamburger-btn').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeDrawer() {
-  document.getElementById('drawer').classList.remove('open');
-  document.getElementById('drawer-overlay').classList.remove('open');
-  document.getElementById('hamburger-btn').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function toggleDrawer() {
-  const isOpen = document.getElementById('drawer').classList.contains('open');
-  isOpen ? closeDrawer() : openDrawer();
-}
-
-// Fecha ao clicar fora
-document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
-
-// Fecha com ESC
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
-
-// ── Storage ──
-const STORAGE_KEY = 'balofinho_registros';
-
-function carregarRegistros() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-}
-
-function salvarRegistros(registros) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
-}
-
 // ── Sub-abas ──
-function showSubPage(id) {
+window.showSubPage = function(id) {
   document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('sub-' + id).classList.add('active');
   document.querySelector(`[data-tab="${id}"]`).classList.add('active');
-  if (id === 'info') {
-    renderInfoTable(carregarRegistros().filter(r => r.transId === TRANS_ID));
-    atualizarStats();
-  }
-}
+  if (id === 'info') renderInfoTable(registrosCache);
+};
 
 // ── Checkboxes ──
-function toggleCk(label) {
+window.toggleCk = function(label) {
   const cb = label.querySelector('input[type=checkbox]');
   cb.checked = !cb.checked;
   label.classList.toggle('checked', cb.checked);
-}
+};
 
 // ── Limpar form ──
-function limparForm() {
+window.limparForm = function() {
   document.querySelectorAll('#sub-manutencao .ck').forEach(l => {
     l.classList.remove('checked');
     l.querySelector('input').checked = false;
@@ -129,10 +125,10 @@ function limparForm() {
   document.getElementById('manut-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('manut-descricao').value = '';
   document.getElementById('manut-quem').value = '';
-}
+};
 
 // ── Salvar manutenção ──
-function salvarManutencao() {
+window.salvarManutencao = async function() {
   const tipos     = ['t1','t2','t3'].filter(t => document.getElementById('tipo-' + t).checked).map(t => t.toUpperCase());
   const esteira   = document.getElementById('esteira-select').value;
   const data      = document.getElementById('manut-data').value;
@@ -140,45 +136,56 @@ function salvarManutencao() {
   const quem      = document.getElementById('manut-quem').value;
 
   if (!data || !descricao || !quem) {
-    showToast('Preencha data, descrição e técnico.', 'err');
-    return;
+    showToast('Preencha data, descrição e técnico.', 'err'); return;
   }
 
-  const registros = carregarRegistros();
-  registros.push({
-    id: Date.now(),
-    transId: TRANS_ID,
-    transNome: TRANS_NOME,
-    tipos, esteira, data, descricao, quem,
-    anotacoes: ''
-  });
-  salvarRegistros(registros);
-  limparForm();
-  atualizarStats();
-  showToast('Manutenção registrada!', 'ok');
+  try {
+    showToast('Salvando…', 'ok');
+    await addDoc(collection(db, 'manutencoes'), {
+      transId: TRANS_ID,
+      transNome: TRANS_NOME,
+      tipos, esteira, data, descricao, quem,
+      anotacoes: '',
+      criadoEm: new Date().toISOString()
+    });
+    window.limparForm();
+    await carregarRegistros();
+    showToast('Manutenção registrada!', 'ok');
+  } catch (e) {
+    console.error(e);
+    showToast('Erro ao salvar. Tente novamente.', 'err');
+  }
+};
+
+// ── Carregar registros do Firestore ──
+async function carregarRegistros() {
+  try {
+    const q = query(collection(db, 'manutencoes'), where('transId', '==', TRANS_ID));
+    const snap = await getDocs(q);
+    registrosCache = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    registrosCache.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    atualizarStats();
+  } catch (e) {
+    console.error('Erro ao carregar:', e);
+  }
 }
 
 // ── Stats ──
 function atualizarStats() {
-  const todos  = carregarRegistros().filter(r => r.transId === TRANS_ID);
-  const mes    = new Date().toISOString().slice(0, 7);
-  const mesCt  = todos.filter(r => (r.data || '').startsWith(mes)).length;
-  const ultima = todos.length
-    ? todos.slice().sort((a, b) => (b.data || '').localeCompare(a.data || ''))[0]
-    : null;
+  const mes   = new Date().toISOString().slice(0, 7);
+  const mesCt = registrosCache.filter(r => (r.data || '').startsWith(mes)).length;
+  const ultima = registrosCache.length ? registrosCache[0] : null;
 
-  document.getElementById('stat-total').textContent  = todos.length;
+  document.getElementById('stat-total').textContent  = registrosCache.length;
   document.getElementById('stat-mes').textContent    = mesCt;
   document.getElementById('stat-ultima').textContent = ultima ? formatDate(ultima.data) : '—';
   document.getElementById('trans-sub').textContent   =
-    todos.length === 0
+    registrosCache.length === 0
       ? 'Nenhum registro ainda'
-      : todos.length + (todos.length === 1 ? ' registro' : ' registros') + ' de manutenção';
+      : registrosCache.length + (registrosCache.length === 1 ? ' registro' : ' registros') + ' de manutenção';
 }
 
 // ── Tabela Info ──
-let editIndex = null;
-
 function renderInfoTable(dados) {
   const tbody = document.getElementById('info-table-body');
   const empty = document.getElementById('info-empty');
@@ -187,9 +194,7 @@ function renderInfoTable(dados) {
   if (!dados.length) { empty.style.display = ''; return; }
   empty.style.display = 'none';
 
-  const todos = carregarRegistros();
   dados.forEach(r => {
-    const i = todos.indexOf(r);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span style="font-family:'Space Mono',monospace;font-size:.78rem">${formatDate(r.data)}</span></td>
@@ -199,84 +204,94 @@ function renderInfoTable(dados) {
       <td>${r.quem}</td>
       <td>
         <div style="display:flex;gap:.3rem">
-          <button class="btn btn-ghost btn-sm" onclick="abrirAnotacoes(${i})">📝</button>
-          <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${i})">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="excluir(${i})">×</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirAnotacoes('${r._id}')">📝</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirEdicao('${r._id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="excluir('${r._id}')">×</button>
         </div>
       </td>`;
     tbody.appendChild(tr);
   });
 }
 
-function filtrarInfo() {
+window.filtrarInfo = function() {
   const de   = document.getElementById('info-de').value;
   const ate  = document.getElementById('info-ate').value;
   const tipo = document.getElementById('info-tipo').value;
-  const f = carregarRegistros().filter(r => {
-    if (r.transId !== TRANS_ID)              return false;
-    if (de  && r.data < de)                  return false;
-    if (ate && r.data > ate)                 return false;
+  const f = registrosCache.filter(r => {
+    if (de  && r.data < de)                    return false;
+    if (ate && r.data > ate)                   return false;
     if (tipo && !(r.tipos||[]).includes(tipo)) return false;
     return true;
   });
   renderInfoTable(f);
-}
+};
 
 // ── CRUD ──
-function excluir(i) {
+window.excluir = async function(id) {
   if (!confirm('Excluir este registro?')) return;
-  const registros = carregarRegistros();
-  registros.splice(i, 1);
-  salvarRegistros(registros);
-  renderInfoTable(carregarRegistros().filter(r => r.transId === TRANS_ID));
-  atualizarStats();
-  showToast('Registro excluído.', 'ok');
-}
+  try {
+    await deleteDoc(doc(db, 'manutencoes', id));
+    await carregarRegistros();
+    renderInfoTable(registrosCache);
+    showToast('Registro excluído.', 'ok');
+  } catch (e) {
+    showToast('Erro ao excluir.', 'err');
+  }
+};
 
-function abrirEdicao(i) {
-  editIndex = i;
-  const r = carregarRegistros()[i];
+window.abrirEdicao = function(id) {
+  editDocId = id;
+  const r = registrosCache.find(x => x._id === id);
   document.getElementById('edit-data').value      = r.data || '';
   document.getElementById('edit-descricao').value = r.descricao;
   document.getElementById('edit-quem').value      = r.quem;
   document.getElementById('modal-editar').classList.add('open');
-}
+};
 
-function salvarEdicao() {
-  const registros = carregarRegistros();
-  registros[editIndex].data      = document.getElementById('edit-data').value;
-  registros[editIndex].descricao = document.getElementById('edit-descricao').value;
-  registros[editIndex].quem      = document.getElementById('edit-quem').value;
-  salvarRegistros(registros);
-  fecharModal();
-  renderInfoTable(carregarRegistros().filter(r => r.transId === TRANS_ID));
-  atualizarStats();
-  showToast('Registro atualizado!', 'ok');
-}
+window.salvarEdicao = async function() {
+  try {
+    await updateDoc(doc(db, 'manutencoes', editDocId), {
+      data:      document.getElementById('edit-data').value,
+      descricao: document.getElementById('edit-descricao').value,
+      quem:      document.getElementById('edit-quem').value,
+    });
+    window.fecharModal();
+    await carregarRegistros();
+    renderInfoTable(registrosCache);
+    showToast('Registro atualizado!', 'ok');
+  } catch (e) {
+    showToast('Erro ao atualizar.', 'err');
+  }
+};
 
-function abrirAnotacoes(i) {
-  editIndex = i;
-  document.getElementById('anotacoes-text').value = carregarRegistros()[i].anotacoes || '';
+window.abrirAnotacoes = function(id) {
+  editDocId = id;
+  const r = registrosCache.find(x => x._id === id);
+  document.getElementById('anotacoes-text').value = r.anotacoes || '';
   document.getElementById('modal-anotacoes').classList.add('open');
-}
+};
 
-function salvarAnotacao() {
-  const registros = carregarRegistros();
-  registros[editIndex].anotacoes = document.getElementById('anotacoes-text').value;
-  salvarRegistros(registros);
-  fecharModal();
-  showToast('Anotação salva!', 'ok');
-}
+window.salvarAnotacao = async function() {
+  try {
+    await updateDoc(doc(db, 'manutencoes', editDocId), {
+      anotacoes: document.getElementById('anotacoes-text').value
+    });
+    window.fecharModal();
+    await carregarRegistros();
+    showToast('Anotação salva!', 'ok');
+  } catch (e) {
+    showToast('Erro ao salvar anotação.', 'err');
+  }
+};
 
-function fecharModal() {
+window.fecharModal = function() {
   document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
-}
+};
 
-// ── PDF ──
-function gerarPDF() {
+window.gerarPDF = function() {
   showToast('Abrindo impressão…', 'ok');
   setTimeout(() => window.print(), 400);
-}
+};
 
 // ── Helpers ──
 function tiposBadges(tipos) {
@@ -296,8 +311,3 @@ function showToast(msg, type = 'ok') {
   t.className = type + ' show';
   setTimeout(() => t.className = '', 3000);
 }
-
-// ── Init ──
-document.getElementById('manut-data').value = new Date().toISOString().split('T')[0];
-atualizarStats();
-buildDrawer();
