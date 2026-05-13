@@ -71,9 +71,9 @@
       <div class="fg">
         <div class="sl">Tipo de Manutenção</div>
         <div class="checks">
-          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="checkbox" id="tipo-t1"> T1 — Preditiva</label>
-          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="checkbox" id="tipo-t2"> T2 — Preventiva</label>
-          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="checkbox" id="tipo-t3"> T3 — Corretiva</label>
+          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t1"> T1 — Preditiva</label>
+          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t2"> T2 — Preventiva</label>
+          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t3"> T3 — Corretiva</label>
         </div>
       </div>
       <div class="form-row">
@@ -160,22 +160,27 @@
 <div class="modal-overlay" id="modal-editar">
   <div class="modal">
     <div class="modal-title">Editar Registro</div>
-    <div class="fg"><label>Data</label><input type="date" id="edit-data"></div>
-    <div class="fg"><label>Descrição</label><textarea id="edit-descricao"></textarea></div>
-    <div class="fg">
-      <label>Técnico</label>
-      <select id="edit-quem">
-        <option value="">Selecione o técnico…</option>
-          <option>Julio</option>
-          <option>Felipe</option>
-          <option>Julio e Felipe</option>
-          <option>Outro</option>
-      </select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarEdicao()">Salvar</button>
-    </div>
+      <div class="checks">
+            <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t1"> T1 — Preditiva</label>
+            <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t2"> T2 — Preventiva</label>
+            <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t3"> T3 — Corretiva</label>
+      </div>
+      <div class="fg"><label>Data</label><input type="date" id="edit-data"></div>
+      <div class="fg"><label>Descrição</label><textarea id="edit-descricao"></textarea></div>
+      <div class="fg">
+        <label>Técnico</label>
+        <select id="edit-quem">
+          <option value="">Selecione o técnico…</option>
+            <option>Julio</option>
+            <option>Felipe</option>
+            <option>Julio e Felipe</option>
+            <option>Outro</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEdicao()">Salvar</button>
+      </div>
   </div>
 </div>
 

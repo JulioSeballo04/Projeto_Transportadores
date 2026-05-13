@@ -332,7 +332,8 @@ body::before {
   cursor: pointer; transition: all .18s; font-size: .82rem;
   color: var(--text2); user-select: none;
 }
-.ck input { display: none; }
+.ck input[type=checkbox],
+.ck input[type=radio] { display: none; }
 .ck.checked { background: var(--accent-dim); border-color: rgba(245,200,66,.3); color: var(--accent); }
 .ck .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 2px; }
 
@@ -464,4 +465,147 @@ tbody { background: var(--card); }
   .sub-page  { padding: 1rem; }
   .trans-header { padding: 1rem; }
   .drawer { width: 280px; }
+}
+
+/* ════════════════════════════════════════════════════
+   IMPRESSÃO / EXPORTAR PDF
+   Esconde tudo que não é necessário e formata a tabela
+   ════════════════════════════════════════════════════ */
+@media print {
+
+  /* ── Fundo branco e texto preto para impressão ── */
+  * {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #ccc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Esconde elementos desnecessários ── */
+  .topbar,
+  .breadcrumb,
+  .sub-nav,
+  .drawer,
+  .drawer-overlay,
+  .filters,
+  .stats-row,
+  .sub-page#sub-manutencao,
+  .modal-overlay,
+  #toast,
+  .form-actions,
+  td div,           /* Esconde os botões de ação dentro da tabela */
+  td button {
+    display: none !important;
+  }
+
+  /* ── Mostra a aba de info mesmo que não esteja ativa ── */
+  .sub-page#sub-info {
+    display: block !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Cabeçalho de impressão ── */
+  .trans-header {
+    display: block !important;
+    padding: 0 0 1rem 0 !important;
+    border-bottom: 2px solid #000 !important;
+    margin-bottom: 1rem !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Remove badge amarelo e aplica estilo imprimível ── */
+  .trans-badge {
+    background: #000 !important;
+    color: #fff !important;
+    border-radius: 4px !important;
+    font-size: .75rem !important;
+    padding: .15rem .5rem !important;
+  }
+
+  .trans-title {
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+  }
+
+  .trans-sub {
+    font-size: .8rem !important;
+    color: #555 !important;
+  }
+
+  /* ── Adiciona data de impressão no rodapé ── */
+  body::after {
+    content: 'Impresso em: ' attr(data-print-date);
+    display: block;
+    text-align: right;
+    font-size: .75rem;
+    color: #777 !important;
+    margin-top: 1rem;
+    border-top: 1px solid #ccc;
+    padding-top: .5rem;
+  }
+
+  /* ── Tabela ocupa largura total ── */
+  .table-wrap {
+    border: 1px solid #ccc !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: .82rem !important;
+  }
+
+  /* ── Cabeçalho da tabela com fundo cinza claro ── */
+  thead {
+    background: #f0f0f0 !important;
+    display: table-header-group; /* Repete o cabeçalho em cada página */
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    color: #000 !important;
+    font-size: .72rem !important;
+    padding: .5rem .75rem !important;
+    border: 1px solid #ccc !important;
+    text-align: left !important;
+  }
+
+  td {
+    padding: .5rem .75rem !important;
+    border: 1px solid #ccc !important;
+    vertical-align: top !important;
+    white-space: normal !important;   /* Permite quebrar texto longo */
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+  }
+
+  /* ── Não corta linhas no meio da página ── */
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* ── Badges de tipo com borda em vez de cor de fundo ── */
+  .badge {
+    border: 1px solid #000 !important;
+    padding: .1rem .4rem !important;
+    border-radius: 3px !important;
+    font-size: .72rem !important;
+  }
+
+  /* ── Remove mensagem de vazio na impressão ── */
+  .empty { display: none !important; }
+
+  /* ── Margens da página ── */
+  @page {
+    margin: 1.5cm;
+    size: A4 landscape; /* Paisagem para caber mais colunas */
+  }
 }

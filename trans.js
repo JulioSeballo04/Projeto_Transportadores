@@ -1,6 +1,18 @@
-import { auth, db, signOut, onAuthStateChanged, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from './firebase.js';
+// ════════════════════════════════════════════════════════
+//  trans.js — Lógica compartilhada de TODAS as páginas
+//             de transportador (trans-200.html, trans-700.html, etc.)
+//  Cada página define window.TRANS_ID e window.TRANS_NOME
+//  antes de carregar este arquivo
+// ════════════════════════════════════════════════════════
 
-// ── Verifica autenticação ──
+import {
+  auth, db, signOut, onAuthStateChanged,
+  collection, addDoc, getDocs,
+  doc, updateDoc, deleteDoc,
+  query, where
+} from './firebase.js';
+
+// ── VERIFICAÇÃO DE AUTENTICAÇÃO ──
 onAuthStateChanged(auth, user => {
   if (!user) { window.location.href = 'login.html'; return; }
   const nome = sessionStorage.getItem('balofinho_nome') || user.email.split('@')[0];
@@ -14,7 +26,7 @@ window.logout = async function() {
   window.location.href = 'login.html';
 };
 
-// ── Lista de transportadores (para o drawer) ──
+// ── LISTA DE TRANSPORTADORES (para o drawer) ──
 const TRANSPORTADORES = [
   { id: 'guardanapo',      nome: 'Guardanapo',             arquivo: 'trans-guardanapo.html' },
   { id: 'professional',    nome: 'Professional',            arquivo: 'trans-professional.html' },
@@ -33,18 +45,20 @@ const TRANSPORTADORES = [
   { id: '950',             nome: '950',                    arquivo: 'trans-950.html' },
 ];
 
-// Cache local dos registros deste transportador
 let registrosCache = [];
 let editDocId = null;
 
-// ── Init ──
+// ── INIT ──
 async function init() {
   document.getElementById('manut-data').value = new Date().toISOString().split('T')[0];
   await carregarRegistros();
   buildDrawer();
 }
 
-// ── Drawer ──
+// ════════════════════════════════════════
+//  DRAWER
+// ════════════════════════════════════════
+
 window.openDrawer = function() {
   document.getElementById('drawer').classList.add('open');
   document.getElementById('drawer-overlay').classList.add('open');
@@ -60,7 +74,9 @@ window.closeDrawer = function() {
 };
 
 window.toggleDrawer = function() {
-  document.getElementById('drawer').classList.contains('open') ? window.closeDrawer() : window.openDrawer();
+  document.getElementById('drawer').classList.contains('open')
+    ? window.closeDrawer()
+    : window.openDrawer();
 };
 
 document.getElementById('drawer-overlay').addEventListener('click', window.closeDrawer);
@@ -70,7 +86,6 @@ async function buildDrawer() {
   const body = document.getElementById('drawer-body');
   if (!body) return;
 
-  // Busca contagens de todos os transportadores
   const snap = await getDocs(collection(db, 'manutencoes'));
   const todos = snap.docs.map(d => d.data());
 
@@ -99,7 +114,10 @@ async function buildDrawer() {
   });
 }
 
-// ── Sub-abas ──
+// ════════════════════════════════════════
+//  SUB-ABAS
+// ════════════════════════════════════════
+
 window.showSubPage = function(id) {
   document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
@@ -108,18 +126,69 @@ window.showSubPage = function(id) {
   if (id === 'info') renderInfoTable(registrosCache);
 };
 
-// ── Checkboxes ──
+// ════════════════════════════════════════
+//  RADIO BUTTONS ESTILIZADOS (um por vez)
+// ════════════════════════════════════════
+
+// Seleciona um radio button estilizado e desmarca os outros do grupo
 window.toggleCk = function(label) {
-  const cb = label.querySelector('input[type=checkbox]');
-  cb.checked = !cb.checked;
-  label.classList.toggle('checked', cb.checked);
+  const rb = label.querySelector('input[type=radio]');
+  if (!rb) return;
+
+  // Pega o container pai (.checks) para desmarcar os outros do grupo
+  const container = label.closest('.checks');
+  if (container) {
+    // Remove a classe 'checked' de todos os labels do grupo
+    container.querySelectorAll('.ck').forEach(l => l.classList.remove('checked'));
+  }
+
+  // Marca este e aplica o estilo visual
+  rb.checked = true;
+  label.classList.add('checked');
 };
 
-// ── Limpar form ──
+// Lê o tipo selecionado de um container (radio = apenas um)
+// Retorna array com um elemento para manter compatibilidade com o banco
+function lerTipos(containerSelector) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return [];
+  // Busca qualquer radio marcado dentro do container (independente do name)
+  const rb = container.querySelector('input[type=radio]:checked');
+  if (!rb) return [];
+  return [rb.id.replace(/^(edit-)?tipo-/, '').toUpperCase()];
+}
+
+// Define o tipo selecionado ao abrir o modal de edição
+function definirTipos(containerSelector, tipos) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return;
+
+  // Desmarca todos primeiro
+  container.querySelectorAll('.ck').forEach(l => l.classList.remove('checked'));
+  container.querySelectorAll('input[type=radio]').forEach(rb => rb.checked = false);
+
+  // Marca apenas o tipo correspondente ao primeiro item salvo
+  const tipo = tipos && tipos[0]; // Radio = só um valor
+  if (!tipo) return;
+
+  container.querySelectorAll('input[type=radio]').forEach(rb => {
+    if (rb.id.replace(/^(edit-)?tipo-/, '').toUpperCase() === tipo) {
+      rb.checked = true;
+      rb.closest('.ck').classList.add('checked');
+    }
+  });
+}
+
+// ════════════════════════════════════════
+//  FORMULÁRIO DE MANUTENÇÃO
+// ════════════════════════════════════════
+
 window.limparForm = function() {
+  // Desmarca todos os radio buttons do formulário de manutenção
   document.querySelectorAll('#sub-manutencao .ck').forEach(l => {
     l.classList.remove('checked');
-    l.querySelector('input').checked = false;
+    const input = l.querySelector('input');
+    if (input) input.checked = false;
   });
   document.getElementById('esteira-select').value = '';
   document.getElementById('manut-data').value = new Date().toISOString().split('T')[0];
@@ -127,16 +196,17 @@ window.limparForm = function() {
   document.getElementById('manut-quem').value = '';
 };
 
-// ── Salvar manutenção ──
 window.salvarManutencao = async function() {
-  const tipos     = ['t1','t2','t3'].filter(t => document.getElementById('tipo-' + t).checked).map(t => t.toUpperCase());
-  const esteira   = document.getElementById('esteira-select').value;
-  const data      = document.getElementById('manut-data').value;
+  // Lê os tipos marcados do formulário de manutenção
+  const tipos    = lerTipos('#sub-manutencao .checks');
+  const esteira  = document.getElementById('esteira-select').value;
+  const data     = document.getElementById('manut-data').value;
   const descricao = document.getElementById('manut-descricao').value.trim();
-  const quem      = document.getElementById('manut-quem').value;
+  const quem     = document.getElementById('manut-quem').value;
 
   if (!data || !descricao || !quem) {
-    showToast('Preencha data, descrição e técnico.', 'err'); return;
+    showToast('Preencha data, descrição e técnico.', 'err');
+    return;
   }
 
   try {
@@ -157,7 +227,10 @@ window.salvarManutencao = async function() {
   }
 };
 
-// ── Carregar registros do Firestore ──
+// ════════════════════════════════════════
+//  CARREGAR DO FIRESTORE
+// ════════════════════════════════════════
+
 async function carregarRegistros() {
   try {
     const q = query(collection(db, 'manutencoes'), where('transId', '==', TRANS_ID));
@@ -170,7 +243,10 @@ async function carregarRegistros() {
   }
 }
 
-// ── Stats ──
+// ════════════════════════════════════════
+//  ESTATÍSTICAS
+// ════════════════════════════════════════
+
 function atualizarStats() {
   const mes   = new Date().toISOString().slice(0, 7);
   const mesCt = registrosCache.filter(r => (r.data || '').startsWith(mes)).length;
@@ -185,7 +261,10 @@ function atualizarStats() {
       : registrosCache.length + (registrosCache.length === 1 ? ' registro' : ' registros') + ' de manutenção';
 }
 
-// ── Tabela Info ──
+// ════════════════════════════════════════
+//  TABELA DE HISTÓRICO
+// ════════════════════════════════════════
+
 function renderInfoTable(dados) {
   const tbody = document.getElementById('info-table-body');
   const empty = document.getElementById('info-empty');
@@ -226,7 +305,10 @@ window.filtrarInfo = function() {
   renderInfoTable(f);
 };
 
-// ── CRUD ──
+// ════════════════════════════════════════
+//  CRUD
+// ════════════════════════════════════════
+
 window.excluir = async function(id) {
   if (!confirm('Excluir este registro?')) return;
   try {
@@ -242,19 +324,38 @@ window.excluir = async function(id) {
 window.abrirEdicao = function(id) {
   editDocId = id;
   const r = registrosCache.find(x => x._id === id);
+
+  // Preenche os campos de texto do modal
   document.getElementById('edit-data').value      = r.data || '';
   document.getElementById('edit-descricao').value = r.descricao;
   document.getElementById('edit-quem').value      = r.quem;
+
+  // Se o modal tiver checkboxes de tipo, pré-marca os tipos salvos
+  // Funciona tanto se o modal tiver quanto se não tiver os checkboxes
+  definirTipos('#modal-editar .checks', r.tipos || []);
+
   document.getElementById('modal-editar').classList.add('open');
 };
 
 window.salvarEdicao = async function() {
   try {
-    await updateDoc(doc(db, 'manutencoes', editDocId), {
+    // Tenta ler os tipos do modal (se existirem checkboxes lá)
+    const tiposModal = lerTipos('#modal-editar .checks');
+
+    // Monta o objeto de atualização
+    const atualizacao = {
       data:      document.getElementById('edit-data').value,
       descricao: document.getElementById('edit-descricao').value,
       quem:      document.getElementById('edit-quem').value,
-    });
+    };
+
+    // Só atualiza os tipos se o modal tiver checkboxes configurados
+    if (tiposModal.length > 0 || document.querySelector('#modal-editar .checks')) {
+      atualizacao.tipos = tiposModal;
+    }
+
+    await updateDoc(doc(db, 'manutencoes', editDocId), atualizacao);
+
     window.fecharModal();
     await carregarRegistros();
     renderInfoTable(registrosCache);
@@ -289,11 +390,30 @@ window.fecharModal = function() {
 };
 
 window.gerarPDF = function() {
+  // Garante que a aba de histórico esteja visível na impressão
+  // mesmo que o usuário esteja na aba de manutenção
+  const subInfo = document.getElementById('sub-info');
+  const eraAtiva = subInfo.classList.contains('active');
+  subInfo.classList.add('active');
+
+  // Injeta a data atual no body para o rodapé de impressão
+  const agora = new Date();
+  const dataFormatada = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.body.setAttribute('data-print-date', dataFormatada);
+
   showToast('Abrindo impressão…', 'ok');
-  setTimeout(() => window.print(), 400);
+
+  setTimeout(() => {
+    window.print();
+    // Restaura o estado original após imprimir
+    if (!eraAtiva) subInfo.classList.remove('active');
+  }, 400);
 };
 
-// ── Helpers ──
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
+
 function tiposBadges(tipos) {
   if (!tipos || !tipos.length) return '<span style="color:var(--text3);font-size:.78rem">—</span>';
   return tipos.map(t => `<span class="badge badge-${t.toLowerCase()}">${t}</span>`).join(' ');

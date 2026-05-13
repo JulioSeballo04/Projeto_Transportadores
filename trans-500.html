@@ -71,9 +71,9 @@
       <div class="fg">
         <div class="sl">Tipo de Manutenção</div>
         <div class="checks">
-          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="checkbox" id="tipo-t1"> T1 — Preventiva</label>
-          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="checkbox" id="tipo-t2"> T2 — Corretiva</label>
-          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="checkbox" id="tipo-t3"> T3 — Emergencial</label>
+          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t1"> T1 — Preditiva</label>
+          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t2"> T2 — Preventiva</label>
+          <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t3"> T3 — Corretiva</label>
         </div>
       </div>
       <div class="form-row">
@@ -81,16 +81,11 @@
           <div class="sl">Esteira</div>
           <select id="esteira-select">
             <option value="">Selecione…</option>
-            <option value="Esteira 1">Esteira 1</option>
-              <option value="Esteira 2">Esteira 2</option>
-              <option value="Esteira 3">Esteira 3</option>
-              <option value="Esteira 4">Esteira 4</option>
-              <option value="Esteira 5">Esteira 5</option>
-              <option value="Esteira 6">Esteira 6</option>
-              <option value="Esteira 7">Esteira 7</option>
-              <option value="Esteira 8">Esteira 8</option>
-              <option value="Esteira 9">Esteira 9</option>
-              <option value="Esteira 10">Esteira 10</option>
+            <option value="Esteira 1">1ª esteira - saida enfardadeira</option>
+              <option value="Esteira 2">2ª esteira - Rampa</option>
+              <option value="Esteira 3">3ª esteira - Curva roletada (dentro da 500)</option>
+              <option value="Esteira 4">4ª esteira - Reta atrás Line - Out + Curva</option>
+              <option value="Esteira 5">5ª esteira - Descida para o robô + curva roletada</option>
           </select>
         </div>
         <div class="fg">
@@ -163,19 +158,27 @@
 <div class="modal-overlay" id="modal-editar">
   <div class="modal">
     <div class="modal-title">Editar Registro</div>
-    <div class="fg"><label>Data</label><input type="date" id="edit-data"></div>
-    <div class="fg"><label>Descrição</label><textarea id="edit-descricao"></textarea></div>
-    <div class="fg">
-      <label>Técnico</label>
-      <select id="edit-quem">
-        <option>Carlos Silva</option><option>Ana Pereira</option>
-        <option>João Martins</option><option>Fernanda Lima</option>
-      </select>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarEdicao()">Salvar</button>
-    </div>
+      <div class="checks">
+            <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t1"> T1 — Preditiva</label>
+            <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t2"> T2 — Preventiva</label>
+            <label class="ck" onclick="toggleCk(this)"><span class="dot"></span><input type="radio" name="tipo" id="tipo-t3"> T3 — Corretiva</label>
+      </div>
+      <div class="fg"><label>Data</label><input type="date" id="edit-data"></div>
+      <div class="fg"><label>Descrição</label><textarea id="edit-descricao"></textarea></div>
+      <div class="fg">
+        <label>Técnico</label>
+        <select id="edit-quem">
+          <option value="">Selecione o técnico…</option>
+            <option>Julio</option>
+            <option>Felipe</option>
+            <option>Julio e Felipe</option>
+            <option>Outro</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEdicao()">Salvar</button>
+      </div>
   </div>
 </div>
 
